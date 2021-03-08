@@ -37,5 +37,28 @@ class Handler extends ExceptionHandler
         $this->reportable(function (Throwable $e) {
             //
         });
+        $this->renderable(function (Throwable $exception) {
+            $return = [
+                'code' => 500,
+                'message' => $exception->getMessage(),
+                'result' => NULL
+            ];
+            if ($exception instanceof \Illuminate\Validation\ValidationException) {
+                $return['code'] = 422;
+                $return['message'] = $exception->errors();
+            } else if ($exception instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                $model = $exception->getModel();
+                $className = strtolower(last(explode('\\', $model)));
+                $return['code'] = 404;
+                $return['message'] = 'Data ' . $className . ' not found';
+            } else if ($exception instanceof \Illuminate\Validation\UnauthorizedException || $exception instanceof \Laravel\Passport\Exceptions\MissingScopeException) {
+                $return['code'] = 401;
+                $return['message'] = 'Unauthorize';
+            } else if ($exception instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException || $exception instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                $return['code'] = 404;
+                $return['message'] = 'Route not found';
+            }
+            return response()->json($return, $return['code']);
+        });
     }
 }
