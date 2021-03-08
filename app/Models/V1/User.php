@@ -147,13 +147,8 @@ class User extends Authenticatable implements MustVerifyEmail
         return $status;
     }
 
-    public function getFcmTokenAttribute()
+    public function fcmToken()
     {
-        $return = [];
-        $token = DB::table('oauth_access_tokens')->select('fcm_token')->where('user_id', $this->id)->get();
-        if ($token->count() > 0) {
-            $return = $token->pluck('fcm_token')->toArray();
-        }
-        return $return;
+        return $this->hasMany('App\Models\V1\FcmToken', 'user_id', 'id');
     }
 }

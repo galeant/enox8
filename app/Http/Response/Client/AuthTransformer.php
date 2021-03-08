@@ -31,9 +31,10 @@ class AuthTransformer
         ], 200);
     }
 
-    public static function profile($response)
+    public static function profile($response, $token = false)
     {
         $return = [
+            // 'id' => $response->id,
             'email' => $response->email,
             'firstname' => $response->detail->firstname,
             'lastname' => $response->detail->lastname,
@@ -43,6 +44,9 @@ class AuthTransformer
             'gender' => $response->detail->gender,
             'birthdate' => $response->detail->birthdate
         ];
+        if ($token) {
+            $return['id'] = $response->id;
+        }
         return response()->json([
             'code' => 200,
             'message' => 'Get profile susccess',

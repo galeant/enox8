@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 
 use App\Models\OAuthClient;
 use App\Models\V1\User;
+use App\Models\V1\FcmToken;
 
 use App\Http\Requests\Client\Auth\RegisterRequest;
 use App\Http\Requests\Client\Auth\VerificationRequest;
@@ -25,6 +26,9 @@ use Laravel\Socialite\Facades\Socialite;
 use DB;
 use Carbon\Carbon;
 use Lcobucci\JWT\Parser;
+
+use Lcobucci\JWT\Configuration;
+use Lcobucci\JWT\UnencryptedToken;
 
 class AuthController extends Controller
 {
@@ -105,10 +109,23 @@ class AuthController extends Controller
 
                 if ($token->status() === 200) {
                     $response = json_decode($token->getContent());
-                    $id_token = (new Parser())->parse($response->access_token)->getClaims()['jti']->getValue();
-                    $token = DB::table('oauth_access_tokens')->where('id', $id_token)->update([
+
+                    $getIdUser = Request::create('/api/v1/client/auth/profile?token=true', 'GET');
+                    $getIdUser->headers->set('Authorization', 'Bearer ' . $response->access_token);
+                    $resIdUser = app()->handle($getIdUser);
+                    $resIdUser = json_decode($resIdUser->getContent());
+
+                    FcmToken::create([
+                        'user_id' => $resIdUser->result->id,
+                        'token' => $response->access_token,
                         'fcm_token' => $request->fcm_token
                     ]);
+
+                    // $id_token = (new Parser())->parse($response->access_token)->getClaims()['jti']->getValue();
+                    // dd($id_token);
+                    // $token = DB::table('oauth_access_tokens')->where('id', $id_token)->update([
+                    //     'fcm_token' => $request->fcm_token
+                    // ]);
                     return AuthTransformer::general('Login success', $response);
                 } else {
                     throw new \Illuminate\Validation\UnauthorizedException;
@@ -120,10 +137,11 @@ class AuthController extends Controller
         }
     }
 
-    public function profile()
+    public function profile(Request $request)
     {
+        $for_token = $request->input('token', false);
         $user = auth()->user();
-        return AuthTransformer::profile($user);
+        return AuthTransformer::profile($user, $for_token);
     }
 
     public function profileUpdate(ProfileUpdateRequest $request)
